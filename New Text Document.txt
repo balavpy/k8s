@@ -1,0 +1,180 @@
+COEs (Container orchestration Engines)
++++++++++++++++++++++++++++++++++++++++
+Docker Swaram
+Kubernetes
+Apache Mesos
+
+Node is a machine it could be Phsyical  or Virtual machine . where conatiner running on it.Node can be master ro worker as per defined.
+
+#pod (po), service (svc), replicationcontroller (rc), deployment (deploy), replicaset (rs)
+
+K8s Arechiteture
+=====================
+MASTER
+======
+ETCD Server :-
+Is a distrbuted reliable key-value store that is simple ,secure & fast. ETCD store all the data like nodes,pods,configs,secrets. 
+Also its stored all the data like cluster change and adding nodes. its used in the port 2379.
+
+Kube control manager  :- 
+Continsuly monitor the node process . having many of the controller few of them in the below.
+ 1.node controller 
+ 2.Replication controller
+ 3.Namespace controller
+ 
+Kube Scheduler :- 
+Responsble for schduling the pod in the node like which POD and where needs to be delpoy in the condition of fliter nodes, rank nodes basis.
+
+Kube API Server :- 
+Pirmay management component is the k8s. user execute the kubctl get node. It will come to API and the further process. 
+Kube API is only in the component intertact with ETCD.
+Front of the K8s and user/command line everthing connected to API .
+
+Node
+=====
+Kubelet :- 
+its like agent of each node and it will act accordingly as per instrucation provided by schduluer or master . Will keep update the status of the node to master.
+Kube Proxy :-
+Communicate with each other node/pod. example communicating between webapp server and app server 
+
+YAML Example:https://github.com/mmumshad/kubernetes-training-answers/tree/master/Section_Services
+Voting app project: https://github.com/mmumshad/kubernetes-example-voting-app
+
+
+POD :- 
+===============
+kubctl run nginx --image=nginx
+kubctl describe pod <pod_name>
+kubctl get pods -o Wide
+
+apiVersion: v1
+kind: Pod
+metadata:
+	name: postgres
+	labels:
+	tier: db-tier
+spec:
+  containers:
+    - name: postgres
+      image: postgres
+	  ports:
+	  - ContainerPort: 80
+      env:
+       - name: POSTGRES_PASSWORD
+         value: mysecretpassword
+
+Replicaset/Deployment:-
+==============================
+Replicaset is also monitor the POD  and create the POD if any of fails. 
+Replicaset monitor the POD as per the label. 
+Label/Selector :- Label is used for fliter the POD and help to monitor the replicaset.
+ 
+ kubectl create -f file.yml
+ kubectl get replicaset
+ kubectl edit replicaset <replicaset-name>
+ kubectl delete replicaset <replicaset-name>
+ 
+ kubectl replace -f file.yml ###by using the yaml file
+ kubectl scale --replicas=6 -f file.yml  ### wont update in the yml file 
+ kubectl get all 
+ 
+apiVersion: apps/v1
+kind: ReplicaSet or Deployment
+metadata:
+  name: frontend
+  labels:
+    app: mywebsite
+    tier: frontend
+spec:
+  replicas: 4
+  template:
+    metadata:
+      name: myapp-pod
+      labels:
+        app: myapp
+    spec:
+      containers:
+        - name: nginx
+          image: nginx
+  selector:
+   matchLabels: 
+    app: myapp
+	
+Rollout :-
+===============
+Recreate : Recreate deployment it will destory all the POD and create new POD so application will be down at the time.
+Rolling Update : Rolling update means partially update few of the POD and it will update seamlessly other POD as well. (default deployment)
+
+#Create - kubectl create -f deployment-definition.yml
+#Get - kubectl get deployments
+
+#Update 
+kubectl apply -f deployment-definition.yml
+kubectl setimage depployment/myapp-deployment nginx=nginx:1.0
+
+#status -  
+kubectl rollout status deployment/myapp-deployment
+kubectl rollout history deployment/myapp-deployment
+
+#rollback -
+kubectl rollout undo deployment/myapp-deployment
+
+Networking
+==========
+Each node have own private network  accrodingly it will assign the IP address to their POD. 
+Example : Node1 cluster private network IP range 192.168.0.0 means in their POD IP will be 192.168.1.0, 192.168.2.0
+
+#kubectl get pods -o wide
+
+Services
+============
+Nodeport : 
+Nodeport is a accessing the POD serivce from outside using the port fowarding. Nodeport IP range 30000 - 32767.
+TargetPort is a service running on the port inside the pod (example port 80 http running on the POD) and NodePort is custom port that is 30000 - 32767.
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: myapp-serivce
+spec:
+  type: NodePort
+  ports:
+   - targetPort: 80 
+     port: 80
+	 nodePort: 30008
+  selector:
+     app: mywebsite
+     tier: frontend
+
+ClusterIP : The service create the virtual IP for enable the communicate within POD like frontend/backend. its a default type of service.
+
+apiVersion: v1
+kind: Service
+metadata:
+ name: image-processing
+ labels:
+  app: myapp
+spec:
+ type: ClusterIP #not required to specify since deafult service
+ ports:
+  - port: 80
+    targetPort: 8080
+ selector:
+   tier: backend 
+
+
+Single command  :
+---------------
+kubectl run httpd --image=httpd:alpine --port=80 --expose
+
+
+Loadbalancer: Loadbalancing IP enable the IP access with outside with loadbalancing(single ip/dns name to access outside network). 
+
+
+Namespace :
+=================
+kubectl get ns 
+kubectl get pods --namespace=pod
+kubectl config set-context $(kubectl config get-context) --namespace=prod
+
+

@@ -1,0 +1,173 @@
+Manual Scheduling :-
+====================
+Can select which node POD should runing 
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+  labels:
+    env: test
+spec:
+  containers:
+  - name: nginx
+    image: nginx
+  nodeName: node01
+
+Binding : Use to schedule pod to desired node which is already running.
+
+apiVersion: v1
+kind: Binding
+metadata:
+  name: nginx
+target:
+	apiVersion: v1
+	kind: Node
+	name: node02
+
+Taints and Tolerations :- 
+========================
+1.Taints and tolerations work together to ensure that pods are not scheduled onto inappropriate nodes. 
+2.Taints and Toleration only restirct for node level not for pods.
+3.Taints can be declared in Node. Toleration can be declared in Pod level .
+
+Taints into 3 categoris :
+NoSchedule  ==>  dont schedule any pod to this node and exisitng pod will continue to run
+PreferNoSchedule ==> Not to schedule but some case pod will schedule this node
+NoExecute  ==> Not to schedule any pod  and exisitng pod will terminate it.
+
+Master node by default tant set as NoSchedule thats why schudluer wont schedule any  pod to master node. 
+#kubectl describe node kubemaster | grep Taint
+
+Taints:- #kubectl taint nodes node1 app=blue:NoSchedule
+
+Toleration:- (POD definition yaml file)
+
+tolerations:
+- key: "app"
+  operator: "Equal"
+  value: "blue"
+  effect: "NoSchedule"
+
+The default value for operator is Equal  
+
+Taints:- #kubectl taint nodes node1 key1=value1:NoSchedule
+ 
+tolerations:
+- key: "key1"
+  operator: "Exists"
+  effect: "NoSchedule"
+  
+
+A toleration "matches" a taint if the keys are the same and the effects are the same, and:
+the operator is Exists (in which case no value should be specified), or the operator is Equal and the values are equal.
+
+Node Selectors :-
+=================
+Node selector can be used to select the group of nodes by using lable name.
+But we can't choose more than one label example In case lable name is large/medium/small. we cant select the node large and medium at same time.
+
+#kubectl get nodes --show-labels
+#kubectl label nodes <node_name> <label-key=value>
+
+(Yaml)
+nodeSelector:
+    size: Large //Lables 
+    
+Node Affinity :-
+============
+Used for ensure POD are hosted particular node with advanced expression with multiple condition.
+
+affinity:
+    nodeAffinity:
+        requiredDuringSchedulingIgnoreDuringExecution:
+            nodeSelectorTerms:
+                - matchExpressions:
+                    - key: size
+                      operator: In  # NotIN / Exists
+                      values:
+                      - Large
+                      - Medium
+Sample Yamil
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: blue
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      run: nginx
+  template:
+    metadata:
+      labels:
+        run: nginx
+    spec:
+      containers:
+      - image: nginx
+        imagePullPolicy: Always
+        name: nginx
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: color
+                operator: In
+                values:
+                - blue
+                
+Node Affinity Types:-
+
+1.requiredDuringSchedulingIgnoredDuringExecution
+    #required-DuringScheduling ==> POD will host as per affinity rule if lable not available it will not be hosted
+    #Ignored - DuringExecution ==> It will ignored all already exisitng PODS even some delete the label.
+2.preferredDuringSchedulingIgnoredDuringExecution 
+    #preferred-DuringScheduling ==> POD will first check affinity rules if label not available it will host available nodes.
+    #Ignored - DuringExecution ==> It will ignored all already exisitng PODS even some delete the label.
+3.requiredDuringSchedulingrequiredDuringExecution
+    #required-DuringScheduling ==> POD will first check affinity rules if label not available it will host available nodes.
+    #required - DuringExecution ==> exisitng PODS terminated in case someone delete the label.
+
+Resource Lmits :-
+===============
+Scheduler by default Required 0.5 CPU / 256MB to schedule a POD.
+"When a pod is created the containers are assigned a default CPU request of .5 and memory of 256Mi". For the POD to pick up those defaults you must have first set those as default values for request and limit by creating a LimitRange in that namespace"
+
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: mem-limit-range
+spec:
+  limits:
+  - default:
+      memory: 512Mi
+    defaultRequest:
+      memory: 256Mi
+    type: Container
+
+
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: cpu-limit-range
+spec:
+  limits:
+  - default:
+      cpu: 1
+    defaultRequest:
+      cpu: 0.5
+    type: Container
+    
+Notes:
+1G(Gigabytes) /  1Gi(Gibibyte)
+1M(Megabyte)  / 1Mi(Mebibyte)
+1K(Kilobyte)(1024byte) / 1 Ki(Kibibyte) (1000 byte)
+
+Daemon Sets :-
+================
+Daemon Set ensure one copy of POD will run in all the nodes.Its used for monitoring solution /logs viewer .
+Example:- Kubeproxy component is deployed as Daemonset.
+ 
