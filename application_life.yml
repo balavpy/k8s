@@ -1,0 +1,100 @@
+Application Lifecycle :-
+=====================
+
+Deployments:-
+***********
+
+Recreate : It will bring down all the node at a time and will feel application down
+Rolling Update : it will bring down gradually at the same time new deployment will be update equally . Its default method and no application down time.
+Rollout : rollout gradually will replace the older images.
+
+<!--Create--> :- 
+#kubectl create -f deployment_definition.yml
+<!--Get--> :- 
+#kubectl get deployment
+<!--Update--> :
+#kubectl apply -f deployment_definition.yml
+#kubectl set image deployment/my-app-deployment nginx=nginx:1.9.1
+<!--status--> :
+#kubcetl rollout status deployment/<deply_name>
+#kubectl rollout history deployment/<deply_name>
+<!--Rollback--> :
+#kubcetl rollout under
+
+Configure Application :-
+*************************
+Dockerfile
+---------
+From Ubuntu
+ENTRYPOINT ["sleep"]
+CMD ["5"]
+
+Pod
+-----
+apiVersion: v1
+kind: Pod
+metadata:
+    name: ubuntu
+sepc:
+    containers:
+        - name: ubuntu
+          image: ubuntu-sleeper
+          command: ["sleep2"] ===> replace by ENTRYPOINT["sleep"]
+          args: ["10"] ==> command field of docker file
+          
+
+ConfigMap :-
+*************
+A ConfigMap is an API object used to store non-confidential data in key-value pairs. Pods can consume ConfigMaps as environment variables, command-line arguments, or as configuration files in a volume.
+A ConfigMap is not designed to hold large chunks of data. The data stored in a ConfigMap cannot exceed 1 MiB. If you need to store settings that are larger than this limit, you may want to consider mounting a volume or use a separate database or file service.
+
+Imperative commands :
+#kubcetl create configmap <config_name> --from-literal=key=value
+#kubcetl create configmap <config_name> --from-file=path
+ 
+Declarative command :
+ 
+ config_map.yaml
+ ---------------
+ apiVersion: v1
+ kind: ConfigMap
+ metadata:
+    name: app-config
+ data:
+    APP_COLOR: blue
+    APP_MODE: prod
+    
+#kubectl create -f config_map.yaml
+#kubectl get configmaps
+
+ Pods.yaml
+ -------------
+ 
+ - envFrom:
+    - configMapRef:
+        name: app-config
+
+
+Secrets :-
+*************
+
+A Secret is an object that contains a small amount of sensitive data such as a password, a token, or a key. Such information might otherwise be put in a Pod specification or in a container image.
+Secrets are similar to ConfigMaps but are specifically intended to hold confidential data.
+
+#kubectl create secret generic empty-secret
+#kubectl get secret empty-secret
+
+#kubectl create secret generic db-user-pass \
+#  --from-literal=username=devuser \
+#  --from-literal=password='S!B\*d$zDsb='
+  
+#kubectl get secrets
+#kubectl describe secrets/db-user-pass 
+kind: Secret
+metadata:
+  name: mysecret
+data:
+  username: YWRtaW4=
+  password: MWYyZDFlMmU2N2Rm
+  
+#kubectl apply -f ./secret.yaml
